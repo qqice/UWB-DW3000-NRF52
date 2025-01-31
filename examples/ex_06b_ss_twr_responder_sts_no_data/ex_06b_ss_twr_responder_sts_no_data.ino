@@ -3,9 +3,9 @@
 #define APP_NAME "SS TWR RESP STS NO DATA v1.0"
 
 // connection pins
-const uint8_t PIN_RST = 27; // reset pin
-const uint8_t PIN_IRQ = 34; // irq pin
-const uint8_t PIN_SS = 4; // spi select pin
+const uint8_t PIN_RST = DW_RST; // reset pin
+const uint8_t PIN_IRQ = DW_IRQ; // irq pin
+const uint8_t PIN_SS = DW_CS; // spi select pin
 
 /* Inter-ranging delay period, in milliseconds. */
 #define RNG_DELAY_MS 1000
@@ -87,6 +87,7 @@ void setup() {
 
   /* Configure SPI rate, DW3000 supports up to 38 MHz */
   /* Reset DW IC */
+  selectSPIchannel(SPI1);
   spiBegin(PIN_IRQ, PIN_RST);
   spiSelect(PIN_SS);
 

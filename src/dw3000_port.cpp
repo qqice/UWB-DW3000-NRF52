@@ -6,7 +6,6 @@
  */ 
 
 #include "dw3000_port.h"
-#include "SPI.h"
 
 uint8_t _ss;
 uint8_t _rst;
@@ -19,7 +18,11 @@ uint8_t _irq;
   SPISettings _fastSPI = SPISettings(8000000L, MSBFIRST, SPI_MODE0);
 #endif
 const SPISettings _slowSPI = SPISettings(2000000L, MSBFIRST, SPI_MODE0);
-const SPISettings* _currentSPI = &_fastSPI;
+
+SPIClass* _pSPIx = &SPI;
+SPISettings _spi_settings = _fastSPI;
+
+const SPISettings* _currentSPI = &_spi_settings;
 
 boolean _debounceClockEnabled = false;
 
@@ -89,9 +92,9 @@ void spiBegin(uint8_t irq, uint8_t rst)
   // Configure the IRQ pin as INPUT. Required for correct interrupt setting for ESP8266
       pinMode(irq, INPUT);
   // start SPI
-  SPI.begin();
+  _pSPIx->begin();
 #ifndef ESP8266
-//  SPI.usingInterrupt(digitalPinToInterrupt(irq)); // not every board support this, e.g. ESP8266
+//  _pSPIx->usingInterrupt(digitalPinToInterrupt(irq)); // not every board support this, e.g. ESP8266
 #endif
   // pin and basic member setup
   _rst        = rst;
@@ -101,6 +104,17 @@ void spiBegin(uint8_t irq, uint8_t rst)
   //attachInterrupt(_irq, DW1000Class::handleInterrupt, CHANGE); // todo interrupt for ESP8266
   // TODO throw error if pin is not a interrupt pin
   //attachInterrupt(digitalPinToInterrupt(_irq), DW1000Class::handleInterrupt, RISING); // todo interrupt for ESP8266
+}
+
+void selectSPIchannel(SPIClass& spi)
+{
+  _pSPIx = &spi;
+}
+
+void selectSPIchannel(SPIClass& spi, SPISettings spi_settings)
+{
+  _pSPIx = &spi;
+  _spi_settings = spi_settings;
 }
 
 void reselect(uint8_t ss) {
@@ -128,17 +142,17 @@ void readBytes(byte cmd, uint16_t offset, byte data[], uint16_t n) {
       headerLen += 2;
     }
   }
-  SPI.beginTransaction(*_currentSPI);
+  _pSPIx->beginTransaction(*_currentSPI);
   digitalWrite(_ss, LOW);
   for(i = 0; i < headerLen; i++) {
-    SPI.transfer(header[i]); // send header
+    _pSPIx->transfer(header[i]); // send header
   }
   for(i = 0; i < n; i++) {
-    data[i] = SPI.transfer(JUNK); // read values
+    data[i] = _pSPIx->transfer(JUNK); // read values
   }
   delayMicroseconds(5);
   digitalWrite(_ss, HIGH);
-  SPI.endTransaction();
+  _pSPIx->endTransaction();
 }
 
 // always 4 bytes
@@ -200,17 +214,17 @@ void writeBytes(byte cmd, uint16_t offset, byte data[], uint16_t data_size) {
       headerLen += 2;
     }
   }
-  SPI.beginTransaction(*_currentSPI);
+  _pSPIx->beginTransaction(*_currentSPI);
   digitalWrite(_ss, LOW);
   for(i = 0; i < headerLen; i++) {
-    SPI.transfer(header[i]); // send header
+    _pSPIx->transfer(header[i]); // send header
   }
   for(i = 0; i < data_size; i++) {
-    SPI.transfer(data[i]); // write values
+    _pSPIx->transfer(data[i]); // write values
   }
   delayMicroseconds(5);
   digitalWrite(_ss, HIGH);
-  SPI.endTransaction();
+  _pSPIx->endTransaction();
 }
 
 void enableClock(byte clock) {
@@ -451,17 +465,17 @@ void spiSelect(uint8_t ss) {
 int readfromspi(uint16_t headerLength, uint8_t *headerBuffer, uint16_t readLength, uint8_t *readBuffer)
 {
 
-  SPI.beginTransaction(*_currentSPI);
+  _pSPIx->beginTransaction(*_currentSPI);
   digitalWrite(_ss, LOW);
   for(int i = 0; i < headerLength; i++) {
-    SPI.transfer(headerBuffer[i]); // send header
+    _pSPIx->transfer(headerBuffer[i]); // send header
   }
   for(int i = 0; i < readLength; i++) {
-    readBuffer[i] = SPI.transfer(JUNK); // read values
+    readBuffer[i] = _pSPIx->transfer(JUNK); // read values
   }
   delayMicroseconds(5);
   digitalWrite(_ss, HIGH);
-  SPI.endTransaction();
+  _pSPIx->endTransaction();
 
 
 
@@ -484,17 +498,17 @@ int readfromspi(uint16_t headerLength, uint8_t *headerBuffer, uint16_t readLengt
 
 int writetospi(uint16_t headerLength, uint8_t *headerBuffer, uint16_t bodyLength, uint8_t *bodyBuffer)
 {
-  SPI.beginTransaction(*_currentSPI);
+  _pSPIx->beginTransaction(*_currentSPI);
   digitalWrite(_ss, LOW);
   for(int i = 0; i < headerLength; i++) {
-    SPI.transfer(headerBuffer[i]); // send header
+    _pSPIx->transfer(headerBuffer[i]); // send header
   }
   for(int i = 0; i < bodyLength; i++) {
-    SPI.transfer(bodyBuffer[i]); // write values
+    _pSPIx->transfer(bodyBuffer[i]); // write values
   }
   delayMicroseconds(5);
   digitalWrite(_ss, HIGH);
-  SPI.endTransaction();
+  _pSPIx->endTransaction();
 
   
   /*open_spi(); // we first open the SPI line by setting it to low

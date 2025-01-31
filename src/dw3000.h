@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <Arduino.h>
+#include <SPI.h>
 #include <stdio.h>
 #include <inttypes.h>
 #include "dw3000_uart.h"

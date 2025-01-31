@@ -4,9 +4,9 @@
 #define APP_NAME "SS TWR AES RESP v1.0"
 
 // connection pins
-const uint8_t PIN_RST = 27; // reset pin
-const uint8_t PIN_IRQ = 34; // irq pin
-const uint8_t PIN_SS = 4; // spi select pin
+const uint8_t PIN_RST = DW_RST; // reset pin
+const uint8_t PIN_IRQ = DW_IRQ; // irq pin
+const uint8_t PIN_SS = DW_CS; // spi select pin
 
 /* This SS-TWR example will use sample MAC data frame format as defined by mac_frame_802_15_4_format_t structure */
 mac_frame_802_15_4_format_t     mac_frame;
@@ -111,6 +111,7 @@ void setup() {
 
   /* Configure SPI rate, DW3000 supports up to 38 MHz */
   /* Reset DW IC */
+  selectSPIchannel(SPI1);
   spiBegin(PIN_IRQ, PIN_RST);
   spiSelect(PIN_SS);
 

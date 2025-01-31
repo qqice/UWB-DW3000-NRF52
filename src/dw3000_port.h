@@ -147,7 +147,8 @@
 // PAN identifier, short address register
 #define PANADR 0x03
 #define LEN_PANADR 4
-
+extern SPIClass* _pSPIx;
+extern SPISettings _spi_settings;
 void readBytes(byte cmd, uint16_t offset, byte data[], uint16_t n);
 void readSystemEventStatusRegister();
 void readSystemConfigurationRegister();
@@ -170,6 +171,8 @@ void reset();
 void softReset();
 void idle();
 void spiBegin(uint8_t irq, uint8_t rst);
+void selectSPIchannel(SPIClass& spi);
+void selectSPIchannel(SPIClass& spi, SPISettings spi_settings);
 void spiSelect(uint8_t ss);
 void enableClock(byte clock);
 int writetospi(uint16_t headerLength,  uint8_t *headerBuffer, uint16_t bodyLength, uint8_t *bodyBuffer);
