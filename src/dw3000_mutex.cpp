@@ -48,18 +48,20 @@
  *
  * returns the state of the DW1000 interrupt
  */
-portMUX_TYPE my_mutex = portMUX_INITIALIZER_UNLOCKED;
+//portMUX_TYPE my_mutex = portMUX_INITIALIZER_UNLOCKED;
 decaIrqStatus_t decamutexon(void)
 {
-    portENTER_CRITICAL(&my_mutex);
-    /*portDISABLE_INTERRUPTS();
+    //portENTER_CRITICAL(&my_mutex);
     decaIrqStatus_t s = port_GetEXT_IRQStatus();
+    portENTER_CRITICAL();
+    /*portDISABLE_INTERRUPTS();
 
     if(s) {
         port_DisableEXT_IRQ(); //disable the external interrupt line
     }
     return s ;   // return state before disable, value is used to re-enable in decamutexoff call
     */
+    return s;
 }
 
 /*! ------------------------------------------------------------------------------------------------------------------
@@ -79,7 +81,8 @@ decaIrqStatus_t decamutexon(void)
  */
 void decamutexoff(decaIrqStatus_t s)        // put a function here that re-enables the interrupt at the end of the critical section
 {
-    portEXIT_CRITICAL(&my_mutex);
+    //portEXIT_CRITICAL(&my_mutex);
+    portEXIT_CRITICAL();
     /*portENABLE_INTERRUPTS();
 
     if(s) { //need to check the port state as we can't use level sensitive interrupt on the STM ARM
