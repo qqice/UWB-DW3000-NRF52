@@ -73,8 +73,8 @@ static uint32_t status_reg = 0;
 #define RESP_RX_TIMEOUT_UUS 400
 #endif //NRF52840_XXAA
 
-#define POLL_TX_TO_RESP_RX_DLY_UUS 240
-#define RESP_RX_TIMEOUT_UUS 400
+#define POLL_TX_TO_RESP_RX_DLY_UUS 300
+#define RESP_RX_TIMEOUT_UUS 1500
 
 
 /* Hold copies of computed time of flight and distance here for reference so that it can be examined at a debug breakpoint. */
@@ -102,12 +102,14 @@ void setup() {
     UART_puts("IDLE FAILED\r\n");
     while (1) ;
   }
+  UART_puts("IDLE OK\r\n");
 
   if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR)
   {
     UART_puts("INIT FAILED\r\n");
     while (1) ;
   }
+  UART_puts("INIT OK\r\n");
 
   // Enabling LEDs here for debug so that for each TX the D1 LED will flash on DW3000 red eval-shield boards.
   dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
@@ -118,6 +120,7 @@ void setup() {
     UART_puts("CONFIG FAILED\r\n");
     while (1) ;
   }
+  UART_puts("CONFIG OK\r\n");
 
     /* Configure the TX spectrum parameters (power, PG delay and PG count) */
     dwt_configuretxrf(&txconfig_options);
@@ -134,9 +137,11 @@ void setup() {
     /* Next can enable TX/RX states output on GPIOs 5 and 6 to help debug, and also TX/RX LEDs
      * Note, in real low power applications the LEDs should not be used. */
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
+    UART_puts("INIT DONE\r\n");
 }
 
 void loop() {
+        UART_puts("LOOP\r\n");
         /* Write frame data to DW IC and prepare transmission. See NOTE 7 below. */
         tx_poll_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
         dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
@@ -151,11 +156,13 @@ void loop() {
         while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
         { };
 
+        Serial.println(status_reg,HEX);
         /* Increment frame sequence number after transmission of the poll message (modulo 256). */
         frame_seq_nb++;
 
         if (status_reg & SYS_STATUS_RXFCG_BIT_MASK)
         {
+            UART_puts("RX OK\r\n");
             uint32_t frame_len;
 
             /* Clear good RX frame event in the DW IC status register. */
@@ -165,6 +172,7 @@ void loop() {
             frame_len = dwt_read32bitreg(RX_FINFO_ID) & RXFLEN_MASK;
             if (frame_len <= sizeof(rx_buffer))
             {
+                UART_puts("RX LEN OK\r\n");
                 dwt_readrxdata(rx_buffer, frame_len, 0);
 
                 /* Check that the frame is the expected response from the companion "SS TWR responder" example.
@@ -172,6 +180,7 @@ void loop() {
                 rx_buffer[ALL_MSG_SN_IDX] = 0;
                 if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN) == 0)
                 {
+                    UART_puts("RX MSG OK\r\n");
                     uint32_t poll_tx_ts, resp_rx_ts, poll_rx_ts, resp_tx_ts;
                     int32_t rtd_init, rtd_resp;
                     float clockOffsetRatio ;

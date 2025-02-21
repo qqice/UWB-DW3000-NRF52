@@ -60,7 +60,7 @@ static uint32_t status_reg = 0;
 #define POLL_RX_TO_RESP_TX_DLY_UUS 650
 #endif //NRF52840_XXAA
 
-#define POLL_RX_TO_RESP_TX_DLY_UUS 450
+#define POLL_RX_TO_RESP_TX_DLY_UUS 1000
 
 /* Timestamps of frames transmission/reception. */
 static uint64_t poll_rx_ts;
@@ -87,12 +87,14 @@ void setup() {
     UART_puts("IDLE FAILED\r\n");
     while (1) ;
   }
+  UART_puts("IDLE OK\r\n");
 
   if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR)
   {
     UART_puts("INIT FAILED\r\n");
     while (1) ;
   }
+  UART_puts("INIT OK\r\n");
 
   // Enabling LEDs here for debug so that for each TX the D1 LED will flash on DW3000 red eval-shield boards.
   dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
@@ -103,6 +105,7 @@ void setup() {
     UART_puts("CONFIG FAILED\r\n");
     while (1) ;
   }
+  UART_puts("CONFIG OK\r\n");
 
     /* Configure the TX spectrum parameters (power, PG delay and PG count) */
     dwt_configuretxrf(&txconfig_options);
@@ -114,9 +117,11 @@ void setup() {
     /* Next can enable TX/RX states output on GPIOs 5 and 6 to help debug, and also TX/RX LEDs
      * Note, in real low power applications the LEDs should not be used. */
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE); 
+    UART_puts("INIT DONE\r\n");
 }
 
 void loop() {
+        UART_puts("LOOP\r\n");
         /* Activate reception immediately. */
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
 
@@ -124,8 +129,10 @@ void loop() {
         while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_ERR)))
         { };
 
+        Serial.println(status_reg,HEX);
         if (status_reg & SYS_STATUS_RXFCG_BIT_MASK)
         {
+            UART_puts("RX OK\r\n");
             uint32_t frame_len;
 
             /* Clear good RX frame event in the DW IC status register. */
@@ -135,6 +142,7 @@ void loop() {
             frame_len = dwt_read32bitreg(RX_FINFO_ID) & RXFLEN_MASK;
             if (frame_len <= sizeof(rx_buffer))
             {
+                UART_puts("RX LEN OK\r\n");
                 dwt_readrxdata(rx_buffer, frame_len, 0);
 
                 /* Check that the frame is a poll sent by "SS TWR initiator" example.
@@ -142,6 +150,7 @@ void loop() {
                 rx_buffer[ALL_MSG_SN_IDX] = 0;
                 if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0)
                 {
+                    UART_puts("RX MSG OK\r\n");
                     uint32_t resp_tx_time;
                     int ret;
 
@@ -168,15 +177,21 @@ void loop() {
                     /* If dwt_starttx() returns an error, abandon this ranging exchange and proceed to the next one. See NOTE 10 below. */
                     if (ret == DWT_SUCCESS)
                     {
+                        UART_puts("TX OK\r\n");
                         /* Poll DW IC until TX frame sent event set. See NOTE 6 below. */
                         while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS_BIT_MASK))
                         { };
-
+                        Serial.println(dwt_read32bitreg(SYS_STATUS_ID),HEX);
                         /* Clear TXFRS event. */
                         dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
 
                         /* Increment frame sequence number after transmission of the poll message (modulo 256). */
                         frame_seq_nb++;
+                    }
+                    else
+                    {
+                        UART_puts("TX FAILED\r\n");
+                        Serial.println(ret,HEX);
                     }
                 }
             }
